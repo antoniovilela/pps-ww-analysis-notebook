@@ -238,19 +238,36 @@ class CreateTableEvents:
     
                     lepton_var_ = ''
                     lepton_sel_name_ = ''
+                    # lepton_var_gen_ = ''
+                    # lepton_sel_gen_name_ = ''
                     if lepton_type__ == 'muon':
                         lepton_var_ = "muon_pt"
                         lepton_sel_name_ = 'Muon'
+                        # if runOnMC_:
+                        #     lepton_var_gen_ = "gen_muon_pt"
+                        #     lepton_sel_gen_name_ = 'GenMuon'
                     elif lepton_type__ == 'electron':
                         lepton_var_ = "electron_pt"
                         lepton_sel_name_ = 'Electron'
+                        # if runOnMC_:
+                        #     lepton_var_gen_ = "gen_electron_pt"
+                        #     lepton_sel_gen_name_ = 'GenElectron'
     
                     msk_1lep = msk_1jet & ( ak.num( events_[ lepton_var_ ] ) >= 1 )
                     selections_.append( lepton_sel_name_ )
                     counts_.append( np.sum( np.array( msk_1lep ).astype("int32") ) )
     
-                    events_ = events_[ msk_1lep ]    
-    
+                    # if runOnMC_:
+                    #     msk_1genlep = msk_1lep & ( ak.num( events_[ lepton_var_gen_ ] ) >= 1 )
+                    #     selections_.append( lepton_sel_gen_name_ )
+                    #     counts_.append( np.sum( np.array( msk_1genlep ).astype("int32") ) )
+                    # if runOnMC_:
+                    #     events_ = events_[ msk_1genlep ]
+                    # else:
+                    #     events_ = events_[ msk_1lep ]
+
+                    events_ = events_[ msk_1lep ]
+
                     # selections_.append( "check_none" )
                     # counts_.append( 0 )
                     
@@ -383,12 +400,29 @@ class CreateTableEvents:
                         events_["muon0_dz"]                           = events_[ "muon_dz" ][:,0]
                         events_["muon0_trackerLayersWithMeasurement"] = events_[ "muon_trackerLayersWithMeasurement" ][:,0]
                         if runOnMC_:
+                            # msk__ = ( ak.num( genmuons_sel_ ) >= 1 )
+                            # print ( ak.to_list( ak.num( genmuons_sel_ ) ) )
+                            # print ( msk__ )
                             events_["gen_muon0_pt"]        = genmuons_sel_[ "pt" ][:,0]
                             events_["gen_muon0_eta"]       = genmuons_sel_[ "eta" ][:,0]
                             events_["gen_muon0_phi"]       = genmuons_sel_[ "phi" ][:,0]
                             events_["gen_muon0_energy"]    = genmuons_sel_[ "energy" ][:,0]
                             events_["gen_muon0_charge"]    = genmuons_sel_[ "charge" ][:,0]
                             events_["gen_muon0_mass"]      = genmuons_sel_[ "mass" ][:,0]
+                            msk__ = ak.is_none( events_["gen_muon0_pt"] )
+                            print ( msk__ )
+                            print ( np.sum( msk__ ) )
+                            events_["gen_muon0_pt"]        = ak.fill_none( events_["gen_muon0_pt"], -999. )
+                            events_["gen_muon0_eta"]       = ak.fill_none( events_["gen_muon0_eta"], -999. )
+                            events_["gen_muon0_phi"]       = ak.fill_none( events_["gen_muon0_phi"], -999. )
+                            events_["gen_muon0_energy"]    = ak.fill_none( events_["gen_muon0_energy"], -999. )
+                            events_["gen_muon0_charge"]    = ak.fill_none( events_["gen_muon0_charge"], -999. )
+                            events_["gen_muon0_mass"]      = ak.fill_none( events_["gen_muon0_mass"], -999. )
+                            msk__ = ak.is_none( events_["gen_muon0_pt"] )
+                            print ( msk__ )
+                            print ( np.sum( msk__ ) )
+                            # print ( ak.to_list( events_["gen_muon0_pt"] ) )
+
                     elif lepton_type__ == 'electron':
                         events_["electron0_pt"]                   = events_[ "electron_pt" ][:,0]
                         events_["electron0_eta"]                  = events_[ "electron_eta" ][:,0]
@@ -412,6 +446,18 @@ class CreateTableEvents:
                             events_["gen_electron0_energy"]    = genelectrons_sel_[ "energy" ][:,0]
                             events_["gen_electron0_charge"]    = genelectrons_sel_[ "charge" ][:,0]
                             events_["gen_electron0_mass"]      = genelectrons_sel_[ "mass" ][:,0]
+                            msk__ = ak.is_none( events_["gen_electron0_pt"] )
+                            print ( msk__ )
+                            print ( np.sum( msk__ ) )
+                            events_["gen_electron0_pt"]        = ak.fill_none( events_["gen_electron0_pt"], -999. )
+                            events_["gen_electron0_eta"]       = ak.fill_none( events_["gen_electron0_eta"], -999. )
+                            events_["gen_electron0_phi"]       = ak.fill_none( events_["gen_electron0_phi"], -999. )
+                            events_["gen_electron0_energy"]    = ak.fill_none( events_["gen_electron0_energy"], -999. )
+                            events_["gen_electron0_charge"]    = ak.fill_none( events_["gen_electron0_charge"], -999. )
+                            events_["gen_electron0_mass"]      = ak.fill_none( events_["gen_electron0_mass"], -999. )
+                            msk__ = ak.is_none( events_["gen_electron0_pt"] )
+                            print ( msk__ )
+                            print ( np.sum( msk__ ) )
     
                     if runOnMC_:
                         events_["prefiring_weight_0"]       = events_["prefiring_weight"][ 0 ]

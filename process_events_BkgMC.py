@@ -25,6 +25,9 @@ elif data_sample == '2018':
         labels_ = [ "Bkg-2018-muon-TTJets" ]
         fileNames_ = {
             "Bkg-2018-muon-TTJets": [ "output-Bkg-2018-muon-TTJets.h5" ],
+            "Bkg-2018-muon-WJetsToLNu_0J": [ "output-Bkg-2018-muon-WJetsToLNu_0J.h5" ],
+            "Bkg-2018-muon-WJetsToLNu_1J": [ "output-Bkg-2018-muon-WJetsToLNu_1J.h5" ],
+            "Bkg-2018-muon-WJetsToLNu_2J": [ "output-Bkg-2018-muon-WJetsToLNu_2J.h5" ],
             }
     elif lepton_type == 'electron':
         labels_ = [ "Bkg-2018-electron-TTJets" ]
