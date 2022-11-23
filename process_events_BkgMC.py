@@ -22,7 +22,8 @@ if data_sample == '2017':
             }
 elif data_sample == '2018':
     if lepton_type == 'muon':
-        labels_ = [ "Bkg-2018-muon-TTJets" ]
+        labels_ = [ "Bkg-2018-muon-TTJets", "Bkg-2018-muon-WJetsToLNu_0J", "Bkg-2018-muon-WJetsToLNu_1J", "Bkg-2018-muon-WJetsToLNu_2J" ]
+        # labels_ = [ "Bkg-2018-muon-WJetsToLNu_0J", "Bkg-2018-muon-WJetsToLNu_1J", "Bkg-2018-muon-WJetsToLNu_2J" ]
         fileNames_ = {
             "Bkg-2018-muon-TTJets": [ "output-Bkg-2018-muon-TTJets.h5" ],
             "Bkg-2018-muon-WJetsToLNu_0J": [ "output-Bkg-2018-muon-WJetsToLNu_0J.h5" ],
