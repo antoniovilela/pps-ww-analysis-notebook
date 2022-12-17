@@ -468,8 +468,16 @@ def check_aperture( period, arm, xangle, xi, theta_x ):
     return ( theta_x < -aperture_parametrisation( period, arm, xangle, xi ) )
 
 
-def get_data( fileNames ):
-    
+def get_data( fileNames, runMin=None, runMax=None ):
+
+    if runMin is not None and runMin <= 0:
+        raise RuntimeError( "Invalid data_sample argument." )
+    if runMax is not None and runMax <= 0:
+        raise RuntimeError( "Invalid data_sample argument." )
+
+    runMin_ = runMin
+    runMax_ = runMax
+
     df_protons_multiRP_list = []
     df_protons_singleRP_list = []
     df_ppstracks_list = []
@@ -552,9 +560,20 @@ def get_data( fileNames ):
                 print ( start_[idx], stop_[idx] )
                 #print ( dset[ start_[idx] : stop_[idx] ] )
                 df_ = pd.DataFrame( dset_protons_multiRP[ start_[idx] : stop_[idx] ], columns=columns_protons_multiRP ).astype( astype_dict_multiRP_ )
-                df_protons_multiRP_list.append( df_ )
-                print ( df_protons_multiRP_list[-1].head() )
-                print ( "Data set size: {}".format( len( df_protons_multiRP_list[-1] ) ) )
+
+                if runMin_ is not None:
+                    msk__ = ( df_.loc[ 'run' ] >= runMin_ )
+                    print ( msk__ )
+                    df_ = df_.loc[ msk__ ]
+                if runMax_ is not None and df_.shape[0] > 0:
+                    msk__ = ( df_.loc[ 'run' ] <= runMax_ )
+                    print ( msk__ )
+                    df_ = df_.loc[ msk__ ]
+
+                if df_.shape[0] > 0:
+                    df_protons_multiRP_list.append( df_ )
+                    print ( df_protons_multiRP_list[-1].head() )
+                    print ( "Data set size: {}".format( len( df_protons_multiRP_list[-1] ) ) )
 
             entries_protons_singleRP = dset_protons_singleRP.shape[0]
             start_ = list( range( 0, entries_protons_singleRP, chunk_size ) )
@@ -575,9 +594,20 @@ def get_data( fileNames ):
                 print ( start_[idx], stop_[idx] )
                 #print ( dset[ start_[idx] : stop_[idx] ] )
                 df_ = pd.DataFrame( dset_protons_singleRP[ start_[idx] : stop_[idx] ], columns=columns_protons_singleRP ).astype( astype_dict_singleRP_ )
-                df_protons_singleRP_list.append( df_ )
-                print ( df_protons_singleRP_list[-1].head() )
-                print ( "Data set size: {}".format( len( df_protons_singleRP_list[-1] ) ) )
+
+                if runMin_ is not None:
+                    msk__ = ( df_.loc[ 'run' ] >= runMin_ )
+                    print ( msk__ )
+                    df_ = df_.loc[ msk__ ]
+                if runMax_ is not None and df_.shape[0] > 0:
+                    msk__ = ( df_.loc[ 'run' ] <= runMax_ )
+                    print ( msk__ )
+                    df_ = df_.loc[ msk__ ]
+
+                if df_.shape[0] > 0:
+                    df_protons_singleRP_list.append( df_ )
+                    print ( df_protons_singleRP_list[-1].head() )
+                    print ( "Data set size: {}".format( len( df_protons_singleRP_list[-1] ) ) )
 
             entries_ppstracks = dset_ppstracks.shape[0]
             start_ = list( range( 0, entries_ppstracks, chunk_size ) )
@@ -598,9 +628,20 @@ def get_data( fileNames ):
                 print ( start_[idx], stop_[idx] )
                 #print ( dset[ start_[idx] : stop_[idx] ] )
                 df_ = pd.DataFrame( dset_ppstracks[ start_[idx] : stop_[idx] ], columns=columns_ppstracks ).astype( astype_dict_ppstracks_ )
-                df_ppstracks_list.append( df_ )
-                print ( df_ppstracks_list[-1].head() )
-                print ( "Data set size: {}".format( len( df_ppstracks_list[-1] ) ) )
+
+                if runMin_ is not None:
+                    msk__ = ( df_.loc[ 'run' ] >= runMin_ )
+                    print ( msk__ )
+                    df_ = df_.loc[ msk__ ]
+                if runMax_ is not None and df_.shape[0] > 0:
+                    msk__ = ( df_.loc[ 'run' ] <= runMax_ )
+                    print ( msk__ )
+                    df_ = df_.loc[ msk__ ]
+
+                if df_.shape[0] > 0:
+                    df_ppstracks_list.append( df_ )
+                    print ( df_ppstracks_list[-1].head() )
+                    print ( "Data set size: {}".format( len( df_ppstracks_list[-1] ) ) )
 
     df_counts = df_counts_list[0]
     for idx in range( 1, len( df_counts_list ) ):

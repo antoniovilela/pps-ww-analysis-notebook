@@ -10,7 +10,7 @@ lepton_type = 'muon'
 # data_sample = '2017'
 data_sample = '2018'
 
-label = "data-{}-{}".format( data_sample, lepton_type )
+label = "data-{}-{}-events".format( data_sample, lepton_type )
 
 tree_path = "SlimmedNtuple"
 # tree_path = "demo/SlimmedNtuple"

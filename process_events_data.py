@@ -6,7 +6,7 @@ lepton_type_ = "muon"
 # data_sample = '2017'
 data_sample = '2018'
 
-label__ = "data-{}-{}".format( data_sample, lepton_type_ )
+label__ = "data-{}-{}-events".format( data_sample, lepton_type_ )
 
 base_path_ = "/eos/home-a/antoniov/SWAN_projects/pps-ww-analysis/output"
 labels_ = []
@@ -33,22 +33,22 @@ elif data_sample == '2018':
     labels_ = []
     if lepton_type_ == 'muon':
         labels_.append( label__ + "-2018A" )
-        fileNames_data_[ ( label__ + "-2018A" ) ] = [ 'output-data-2018-muon-2018A.h5' ]
+        fileNames_data_[ ( label__ + "-2018A" ) ] = [ 'output-data-2018-muon-events-2018A.h5' ]
         labels_.append( label__ + "-2018B" )
-        fileNames_data_[ ( label__ + "-2018B" ) ] = [ 'output-data-2018-muon-2018B.h5' ]
+        fileNames_data_[ ( label__ + "-2018B" ) ] = [ 'output-data-2018-muon-events-2018B.h5' ]
         labels_.append( label__ + "-2018C" )
-        fileNames_data_[ ( label__ + "-2018C" ) ] = [ 'output-data-2018-muon-2018C.h5' ]
+        fileNames_data_[ ( label__ + "-2018C" ) ] = [ 'output-data-2018-muon-events-2018C.h5' ]
         labels_.append( label__ + "-2018D" )
-        fileNames_data_[ ( label__ + "-2018D" ) ] = [ 'output-data-2018-muon-2018D.h5' ]
+        fileNames_data_[ ( label__ + "-2018D" ) ] = [ 'output-data-2018-muon-events-2018D.h5' ]
     elif lepton_type_ == 'electron':
         labels_.append( label__ + "-2018A" )
-        fileNames_data_[ ( label__ + "-2018A" ) ] = [ 'output-data-2018-electron-2018A.h5' ]
+        fileNames_data_[ ( label__ + "-2018A" ) ] = [ 'output-data-2018-electron-events-2018A.h5' ]
         labels_.append( label__ + "-2018B" )
-        fileNames_data_[ ( label__ + "-2018B" ) ] = [ 'output-data-2018-electron-2018B.h5' ]
+        fileNames_data_[ ( label__ + "-2018B" ) ] = [ 'output-data-2018-electron-events-2018B.h5' ]
         labels_.append( label__ + "-2018C" )
-        fileNames_data_[ ( label__ + "-2018C" ) ] = [ 'output-data-2018-electron-2018C.h5' ]
+        fileNames_data_[ ( label__ + "-2018C" ) ] = [ 'output-data-2018-electron-events-2018C.h5' ]
         labels_.append( label__ + "-2018D" )
-        fileNames_data_[ ( label__ + "-2018D" ) ] = [ 'output-data-2018-electron-2018D.h5' ]
+        fileNames_data_[ ( label__ + "-2018D" ) ] = [ 'output-data-2018-electron-events-2018D.h5' ]
 
 for key_ in fileNames_data_:
     fileNames_data_[ key_ ] = [ "{}/{}".format( base_path_, item_ ) for item_ in fileNames_data_[ key_ ] ]

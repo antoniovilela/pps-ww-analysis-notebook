@@ -5,29 +5,21 @@ set EXEC=/eos/home-a/antoniov/SWAN_projects/pps-ww-analysis
 set OUTPUT=/eos/home-a/antoniov/SWAN_projects/pps-ww-analysis/output
 ###
 
-#set file=$1
-#set label=$2
-#set option1="$3"
-#set option2="$4"
-#set option3="$5"
-#set option4="$6"
-#set option5="$7"
-#set option6="$8"
-#echo "file: "$file
-#echo "label: "$label
-#echo "option: "$option1
-#echo "option: "$option2
-#echo "option: "$option3
-#echo "option: "$option4
-#echo "option: "$option5
-#echo "option: "$option6
+set option1="$1"
+set option2="$2"
+set option3="$3"
+echo "option: "$option1
+echo "option: "$option2
+echo "option: "$option3
 
 echo $EXEC
 echo $OUTPUT
 
-source /afs/cern.ch/user/a/antoniov/work/env/uproot-LCG_101/bin/activate.csh
-
 set currentdir=`pwd`
+cd $EXEC
+echo $EXEC
+source set_cmssw.csh
+cd $currentdir
 echo $currentdir
 ls
 
@@ -46,6 +38,6 @@ endif
 env
 
 echo 'Running...'
-echo python3 $EXEC/create_table_data_random_protons.py
-python3 $EXEC/create_table_data_random_protons.py
+echo python3 $EXEC/create_table_data_random_protons.py $option1 $option2 $option3
+python3 $EXEC/create_table_data_random_protons.py $option1 $option2 $option3
 cp *.h5 $OUTPUT

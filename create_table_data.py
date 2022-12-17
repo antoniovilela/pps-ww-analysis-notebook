@@ -84,19 +84,19 @@ elif data_sample == '2018':
     if lepton_type == 'muon':
         fileNames_data[ "2018A" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/SingleMuon-Run2018A/SingleMuon-Run2018A_merged.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/SingleMuon_UL2018A_MiniAODv2-v3_noduplicates.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/SingleMuon_UL2018A_MiniAODv2-v3_noduplicates.root"
         ]
         fileNames_data[ "2018B" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/SingleMuon-Run2018B/SingleMuon-Run2018B_merged.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/SingleMuon_UL2018B_MiniAODv2-v2_noduplicates.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/SingleMuon_UL2018B_MiniAODv2-v2_noduplicates.root"
         ]
         fileNames_data[ "2018C" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/SingleMuon-Run2018C/SingleMuon-Run2018C_merged.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/SingleMuon_UL2018C_MiniAODv2-v2_noduplicates.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/SingleMuon_UL2018C_MiniAODv2-v2_noduplicates.root"
         ]
         fileNames_data[ "2018D" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/SingleMuon-Run2018D/SingleMuon-Run2018D_merged.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/SingleMuon_UL2018D_MiniAODv2-v3_noduplicates.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/SingleMuon_UL2018D_MiniAODv2-v3_noduplicates.root"
         ]
     elif lepton_type == 'electron':
         fileNames_data[ "2018A" ] = [

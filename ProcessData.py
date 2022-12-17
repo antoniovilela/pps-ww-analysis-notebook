@@ -5,6 +5,7 @@ import ROOT
 
 class ProcessData:
     def __init__( self, lepton_type, data_sample, labels, fileNames, random_protons=False, mix_protons=False, runOnMC=False, output_dir="", use_hash_index=False ):
+
         if lepton_type not in ( 'muon', 'electron' ):
             raise RuntimeError( "Invalid lepton_type argument." )
 
@@ -372,7 +373,15 @@ class ProcessData:
                df.loc[ :, "xi" + names_varminus_[ idx_ ] ] = df_arr_xi_ - val_ * sigma_xi_
            df.loc[ :, "sigma_xi" ] = sigma_xi_
 
-    def __call__( self, apply_fiducial=True, within_aperture=False, select_2protons=True ):
+    def __call__( self, apply_fiducial=True, within_aperture=False, select_2protons=True, runMin=None, runMax=None ):
+
+        if runMin is not None and runMin <= 0:
+            raise RuntimeError( "Invalid data_sample argument." )
+        if runMax is not None and runMax <= 0:
+            raise RuntimeError( "Invalid data_sample argument." )
+
+        runMin_ = runMin
+        runMax_ = runMax
 
         df_counts = {}
         df_protons_multiRP_index = {}
@@ -393,7 +402,7 @@ class ProcessData:
             # with pd.HDFStore( "reduced-data-store-{}.h5".format( label_ ), complevel=5 ) as store_:
             with pd.HDFStore( file_path_, 'w', complevel=5 ) as store_:
         
-                df_counts_, df_protons_multiRP_, df_protons_singleRP_, df_ppstracks_ = get_data( self.fileNames_[ label_ ] )
+                df_counts_, df_protons_multiRP_, df_protons_singleRP_, df_ppstracks_ = get_data( self.fileNames_[ label_ ], runMin=runMin_, runMax=runMax_ )
 
                 self.fetchDataPeriod( df_protons_multiRP_ ) 
 
