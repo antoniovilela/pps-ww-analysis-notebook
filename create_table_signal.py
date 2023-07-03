@@ -51,30 +51,30 @@ elif data_sample == '2018':
         # ]
         fileNames_A0W_ACW[ "A0W1e-6" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/GGToWW_bSM-A0W1e-6_13TeV-fpmc-herwig6-2018/SlimmedNtuple_merged_mu.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/FPMC_WW_bSM_13tev_a0w_1e-6_aCw_0_semi_pt0.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/FPMC_WW_bSM_13tev_a0w_1e-6_aCw_0_semi_pt0.root"
         ]
         fileNames_A0W_ACW[ "A0W2e-6" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/GGToWW_bSM-A0W2e-6_13TeV-fpmc-herwig6-2018/SlimmedNtuple_merged_mu.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/FPMC_WW_bSM_13tev_a0w_2e-6_aCw_0_semi_pt0.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/FPMC_WW_bSM_13tev_a0w_2e-6_aCw_0_semi_pt0.root"
         ]
         fileNames_A0W_ACW[ "A0W5e-6" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/GGToWW_bSM-A0W5e-6_13TeV-fpmc-herwig6-2018/SlimmedNtuple_merged_mu.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/FPMC_WW_bSM_13tev_a0w_5e-6_aCw_0_semi_pt0.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/FPMC_WW_bSM_13tev_a0w_5e-6_aCw_0_semi_pt0.root"
         ]
         # fileNames_A0W_ACW[ "ACW2e-6" ] = [
         #     "/eos/home-a/antoniov/Workspace/analysis/data/PPS/GGToWW_bSM-ACW2e-6_13TeV-fpmc-herwig6-2018/SlimmedNtuple_merged_mu.root"
         # ]
         fileNames_A0W_ACW[ "ACW5e-6" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/GGToWW_bSM-ACW5e-6_13TeV-fpmc-herwig6-2018/SlimmedNtuple_merged_mu.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/FPMC_WW_bSM_13tev_a0w_0_aCw_5e-6_semi_pt0.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/FPMC_WW_bSM_13tev_a0w_0_aCw_5e-6_semi_pt0.root"
         ]
         fileNames_A0W_ACW[ "ACW8e-6" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/GGToWW_bSM-ACW8e-6_13TeV-fpmc-herwig6-2018/SlimmedNtuple_merged_mu.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/FPMC_WW_bSM_13tev_a0w_0_aCw_8e-6_semi_pt0.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/FPMC_WW_bSM_13tev_a0w_0_aCw_8e-6_semi_pt0.root"
         ]
         fileNames_A0W_ACW[ "ACW2e-5" ] = [
             # "/eos/home-a/antoniov/Workspace/analysis/data/PPS/GGToWW_bSM-ACW2e-5_13TeV-fpmc-herwig6-2018/SlimmedNtuple_merged_mu.root"
-            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/FPMC_WW_bSM_13tev_a0w_0_aCw_2e-5_semi_pt0.root"
+            "/eos/home-a/antoniov/Workspace/analysis/data/PPS/WW_2018/FPMC_WW_bSM_13tev_a0w_0_aCw_2e-5_semi_pt0.root"
         ]
     elif lepton_type == 'electron':
         fileNames_A0W_ACW[ "A0W5e-7" ] = [
@@ -103,7 +103,8 @@ elif data_sample == '2018':
         ]
 
 # output_dir_=""
-output_dir_="output"
+# output_dir_="output"
+output_dir_="output_tmp"
 create_table_ = CreateTable( label=label, lepton_type=lepton_type, data_sample=data_sample, fileNames=fileNames_A0W_ACW, tree_path=tree_path, output_dir=output_dir_ )
 
 create_table_( mix_protons=False, runOnMC=True, step_size=step_size, firstEvent=None, entryStop=None, debug=debug ) 
