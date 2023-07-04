@@ -4,7 +4,7 @@ python3 create_table_data.py
 # Signal
 python3 create_table_signal.py
 python3 create_table_signal_drop_protons.py
-(condor) python3 create_table_signal_mix_protons.py
+python3 create_table_signal_mix_protons.py
 # Background (proton mixing)
 (condor)
 python3 create_table_data_random_protons.py --period=2018A

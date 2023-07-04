@@ -660,7 +660,7 @@ def get_data( fileNames, runMin=None, runMax=None ):
     return (df_counts, df_protons_multiRP, df_protons_singleRP, df_ppstracks)
 
 
-def process_data_protons_multiRP( lepton_type, data_sample, df_protons_multiRP, df_ppstracks=None, apply_fiducial=True, within_aperture=False, random_protons=False, mix_protons=False, select_2protons=True, runOnMC=False, use_hash_index=False ):
+def process_data_protons_multiRP( lepton_type, data_sample, df_protons_multiRP, df_ppstracks=None, apply_fiducial=True, within_aperture=False, random_protons=False, mix_protons=False, calculate_vars_pp=True, select_2protons=True, runOnMC=False, use_hash_index=False ):
 
     # if runOnMC and not mix_protons:
     #     print ( "Turning within_aperture OFF for MC." )
@@ -979,11 +979,18 @@ def process_data_protons_multiRP( lepton_type, data_sample, df_protons_multiRP, 
         columns_drop_.extend( columns_eff_ )
     print ( columns_drop_ )
 
-    # df_protons_multiRP_events, df_protons_multiRP_index_2protons = process_events( data_sample, df_protons_multiRP_index, runOnMC=runOnMC, mix_protons=mix_protons, columns_drop=columns_drop_ )
-    df_protons_multiRP_events, df_protons_multiRP_index_2protons = process_events( data_sample, df_protons_multiRP_index, runOnMC=runOnMC, mix_protons=mix_protons, columns_drop=columns_drop_, use_hash_index=use_hash_index )
-
-    if select_2protons:
-        df_protons_multiRP_index = df_protons_multiRP_index_2protons
+    if calculate_vars_pp:
+        # df_protons_multiRP_events, df_protons_multiRP_index_2protons = process_events( data_sample, df_protons_multiRP_index, runOnMC=runOnMC, mix_protons=mix_protons, columns_drop=columns_drop_ )
+        df_protons_multiRP_events, df_protons_multiRP_index_2protons = process_events( data_sample, df_protons_multiRP_index, runOnMC=runOnMC, mix_protons=mix_protons, columns_drop=columns_drop_, use_hash_index=use_hash_index )
+        if select_2protons:
+            df_protons_multiRP_index = df_protons_multiRP_index_2protons
+    else:
+        labels_xi_ = [ "_nom", "_p100", "_m100" ]
+        if runOnMC:
+            columns_drop_.extend( [ "xi" + label_ for label_ in labels_xi_ ] )
+        df_protons_multiRP_events = df_protons_multiRP_index.drop( columns=columns_drop_ )
+        df_protons_multiRP_events = df_protons_multiRP_events[ ~df_protons_multiRP_events.index.duplicated(keep='first') ]
+        print ( "Number of events: {}".format( df_protons_multiRP_events.shape[0] ) )
 
     print ( df_protons_multiRP_index )
 
@@ -1130,7 +1137,7 @@ def process_events( data_sample, df_protons_multiRP_index, runOnMC=False, mix_pr
     return ( df_protons_multiRP_events, df_protons_multiRP_index_2protons )
 
 
-def process_signal_plus_mix_events( lepton_type, data_sample, labels_signals, labels_signals_mix_protons, label_signal_to_mix_protons, base_path='output', output_dir='output', use_hash_index=True ):
+def process_signal_plus_mix_events( data_sample, labels_signals, labels_signals_mix_protons, label_signal_to_mix_protons, base_path='output', output_dir='output', use_hash_index=True ):
 
     base_path_ = base_path
     output_dir_ = output_dir
@@ -1233,10 +1240,14 @@ def process_signal_plus_mix_events( lepton_type, data_sample, labels_signals, la
         print ( msk_1proton_sig_Arm1_, np.sum( msk_1proton_sig_Arm1_ ) )
         print ( msk_2protons_mix_, np.sum( msk_2protons_mix_ ) )
         
-        df_signals_protons_multiRP_sig_plus_mix_2protons_sig[ label_ ] = df__.loc[ msk_2protons_ ]
-        df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm0[ label_ ] = df__.loc[ msk_1proton_sig_Arm0_ ]
-        df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm1[ label_ ] = df__.loc[ msk_1proton_sig_Arm1_ ]
-        df_signals_protons_multiRP_sig_plus_mix_2protons_mix[ label_ ] = df__.loc[ msk_2protons_mix_ ]
+        if np.sum( msk_2protons_ ) > 0:
+            df_signals_protons_multiRP_sig_plus_mix_2protons_sig[ label_ ] = df__.loc[ msk_2protons_ ]
+        if np.sum( msk_1proton_sig_Arm0_ ) > 0:
+            df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm0[ label_ ] = df__.loc[ msk_1proton_sig_Arm0_ ]
+        if np.sum( msk_1proton_sig_Arm1_ ) > 0:
+            df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm1[ label_ ] = df__.loc[ msk_1proton_sig_Arm1_ ]
+        if np.sum( msk_2protons_mix_ ) > 0:
+            df_signals_protons_multiRP_sig_plus_mix_2protons_mix[ label_ ] = df__.loc[ msk_2protons_mix_ ]
     
     df_signals_protons_multiRP_sig_plus_mix_2protons_events = {}
     df_signals_protons_multiRP_sig_plus_mix_events_categories = {}
@@ -1269,26 +1280,30 @@ def process_signal_plus_mix_events( lepton_type, data_sample, labels_signals, la
             df_signals_protons_multiRP_sig_plus_mix_2protons_events[ label_ ] = df_protons_multiRP_events__
     
             df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ] = {}
-            print ( "2protons_sig" )
-            df__ = df_signals_protons_multiRP_sig_plus_mix_2protons_sig[ label_ ]
-            df_protons_multiRP_events__, df_protons_multiRP_index_2protons__ = process_events( data_sample, df__, runOnMC=True, mix_protons=False, columns_drop=columns_drop_eff_xi_, use_hash_index=use_hash_index )
-        #     df_signals_protons_multiRP_sig_plus_mix_2protons_sig_events[ label_ ] = df_protons_multiRP_events__
-            df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ][ '2protons_sig' ] = df_protons_multiRP_events__
-            print ( "1proton_sig_Arm0" )
-            df__ = df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm0[ label_ ]
-            df_protons_multiRP_events__, df_protons_multiRP_index_2protons__ = process_events( data_sample, df__, runOnMC=True, mix_protons=False, columns_drop=columns_drop_eff_xi_, use_hash_index=use_hash_index )
-        #     df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm0_events[ label_ ] = df_protons_multiRP_events__
-            df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ][ '1proton_sig_Arm0' ] = df_protons_multiRP_events__
-            print ( "1proton_sig_Arm1" )
-            df__ = df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm1[ label_ ]
-            df_protons_multiRP_events__, df_protons_multiRP_index_2protons__ = process_events( data_sample, df__, runOnMC=True, mix_protons=False, columns_drop=columns_drop_eff_xi_, use_hash_index=use_hash_index )
-        #     df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm1_events[ label_ ] = df_protons_multiRP_events__
-            df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ][ '1proton_sig_Arm1' ] = df_protons_multiRP_events__
-            print ( "2protons_mix" )
-            df__ = df_signals_protons_multiRP_sig_plus_mix_2protons_mix[ label_ ]
-            df_protons_multiRP_events__, df_protons_multiRP_index_2protons__ = process_events( data_sample, df__, runOnMC=True, mix_protons=False, columns_drop=columns_drop_eff_xi_, use_hash_index=use_hash_index )
-        #     df_signals_protons_multiRP_sig_plus_mix_2protons_mix_events[ label_ ] = df_protons_multiRP_events__
-            df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ][ '2protons_mix' ] = df_protons_multiRP_events__
+            if label_ in df_signals_protons_multiRP_sig_plus_mix_2protons_sig.keys():
+                print ( "2protons_sig" )
+                df__ = df_signals_protons_multiRP_sig_plus_mix_2protons_sig[ label_ ]
+                df_protons_multiRP_events__, df_protons_multiRP_index_2protons__ = process_events( data_sample, df__, runOnMC=True, mix_protons=False, columns_drop=columns_drop_eff_xi_, use_hash_index=use_hash_index )
+                # df_signals_protons_multiRP_sig_plus_mix_2protons_sig_events[ label_ ] = df_protons_multiRP_events__
+                df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ][ '2protons_sig' ] = df_protons_multiRP_events__
+            if label_ in df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm0.keys():
+                print ( "1proton_sig_Arm0" )
+                df__ = df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm0[ label_ ]
+                df_protons_multiRP_events__, df_protons_multiRP_index_2protons__ = process_events( data_sample, df__, runOnMC=True, mix_protons=False, columns_drop=columns_drop_eff_xi_, use_hash_index=use_hash_index )
+                # df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm0_events[ label_ ] = df_protons_multiRP_events__
+                df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ][ '1proton_sig_Arm0' ] = df_protons_multiRP_events__
+            if label_ in df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm1.keys():
+                print ( "1proton_sig_Arm1" )
+                df__ = df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm1[ label_ ]
+                df_protons_multiRP_events__, df_protons_multiRP_index_2protons__ = process_events( data_sample, df__, runOnMC=True, mix_protons=False, columns_drop=columns_drop_eff_xi_, use_hash_index=use_hash_index )
+                # df_signals_protons_multiRP_sig_plus_mix_1proton_sig_Arm1_events[ label_ ] = df_protons_multiRP_events__
+                df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ][ '1proton_sig_Arm1' ] = df_protons_multiRP_events__
+            if label_ in df_signals_protons_multiRP_sig_plus_mix_2protons_mix.keys():
+                print ( "2protons_mix" )
+                df__ = df_signals_protons_multiRP_sig_plus_mix_2protons_mix[ label_ ]
+                df_protons_multiRP_events__, df_protons_multiRP_index_2protons__ = process_events( data_sample, df__, runOnMC=True, mix_protons=False, columns_drop=columns_drop_eff_xi_, use_hash_index=use_hash_index )
+                # df_signals_protons_multiRP_sig_plus_mix_2protons_mix_events[ label_ ] = df_protons_multiRP_events__
+                df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ][ '2protons_mix' ] = df_protons_multiRP_events__
             
             store_[ "events_multiRP/all" ] = df_signals_protons_multiRP_sig_plus_mix_2protons_events[ label_ ]
             for key_ in df_signals_protons_multiRP_sig_plus_mix_events_categories[ label_ ]:

@@ -84,4 +84,4 @@ print ( fileNames_signals_ )
 
 process_data_ = ProcessData( lepton_type=lepton_type, data_sample=data_sample, labels=labels_signals_, fileNames=fileNames_signals_, mix_protons=False, runOnMC=True, output_dir=output_dir_, use_hash_index=use_hash_index_ )
 
-process_data_( apply_fiducial=True, within_aperture=True, select_2protons=False )
+process_data_( apply_fiducial=True, within_aperture=True, calculate_vars_pp=False, select_2protons=False )

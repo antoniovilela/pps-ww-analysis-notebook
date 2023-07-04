@@ -298,7 +298,7 @@ def create_table( fileNames, label, lepton_type, data_sample, tree_path="demo/Sl
         #         protons_extra_mix_all_[ key_ ] = protons_extra_mix_all_rnd_
         #     ppstracks_mix_all_[ key_ ] = ppstracks_mix_all_rnd_
 
-    dset_chunk_size = 50000
+    # dset_chunk_size = 50000
 
     # columns_protons = [ "run", "lumiblock", "event", "slice", "crossingAngle", "betaStar", "instLumi", "xi", "thx", "thy", "t", "ismultirp", "rpid", "arm", "random",
     #                     "jet0_pt", "jet0_eta", "jet0_phi", "jet0_energy", "jet0_mass", "jet0_corrmass", "jet0_tau1", "jet0_tau2", "jet0_vertexz",
@@ -379,6 +379,8 @@ def create_table( fileNames, label, lepton_type, data_sample, tree_path="demo/Sl
         ppstracks_keys[ col_ ] = col_
 
     counts_label_protons_ = "Proton" if not ( random_protons_ or mix_protons_ ) else "ProtonRnd"
+
+    dset_chunk_size = 50000
 
     # output_file_path_ = ( output_path_ + '/' + 'output-' + label_ + '.h5' )
     file_name_label_ = 'output-{}.h5'.format( label_ )

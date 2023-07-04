@@ -5,7 +5,9 @@ python3 create_table_data.py
 #### Signal
 python3 create_table_signal.py
 
-(condor) python3 create_table_signal_mix_protons.py
+python3 create_table_signal_drop_protons.py
+
+python3 create_table_signal_mix_protons.py
 
 #### Background (proton mixing)
 (condor)
@@ -35,9 +37,13 @@ python3 process_data.py
 #### Signal
 python3 process_signal.py
 
+python3 process_signal_drop_protons.py
+
 python3 process_signal_mix_protons.py
 
 python3 process_signal_plus_mix_events.py
+
+python3 process_signal_plus_mix_events_drop_protons.py
 
 #### Background (proton mixing)
 (condor)

@@ -72,4 +72,4 @@ elif data_sample == '2018':
              "GGToWW-AQGC-2018-electron-A0W5e-6" : "GGToWW-AQGC-mix_protons-2018-electron-A0W5e-6"
         }
 
-process_signal_plus_mix_events( lepton_type=lepton_type, data_sample=data_sample, labels_signals=labels_signals, labels_signals_mix_protons=labels_signals_mix_protons, label_signal_to_mix_protons=label_signal_to_mix_protons, base_path=base_path_, output_dir=output_dir_, use_hash_index=use_hash_index_ )
+process_signal_plus_mix_events( data_sample=data_sample, labels_signals=labels_signals, labels_signals_mix_protons=labels_signals_mix_protons, label_signal_to_mix_protons=label_signal_to_mix_protons, base_path=base_path_, output_dir=output_dir_, use_hash_index=use_hash_index_ )
