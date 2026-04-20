@@ -1210,7 +1210,8 @@ def process_signal_plus_mix_events( data_sample, labels_signals, labels_signals_
         msk_eff_proton_ = np.random.rand( df_signals_protons_multiRP_index[ label_ ].shape[0] ) < df_signals_protons_multiRP_index[ label_ ].loc[ :, "eff_proton_all" ]
         print ( msk_eff_proton_ )
         df_signals_protons_multiRP_eff_sel_index[ label_ ] = df_signals_protons_multiRP_index[ label_ ].loc[ msk_eff_proton_ ]
-    
+        df_signals_protons_multiRP_eff_sel_index[ label_ ][ 'random' ] = 1
+        
         df_signals_protons_multiRP_sig_plus_mix_index[ label_ ] = pd.concat(
             [ df_signals_protons_multiRP_eff_sel_index[ label_ ],
               df_signals_protons_multiRP_mix_protons_index[ label_signal_to_mix_protons[ label_ ] ] ] ).sort_index()
