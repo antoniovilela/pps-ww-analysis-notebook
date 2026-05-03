@@ -1,10 +1,11 @@
 import os
-from processing import *
-from random_experiment import get_systematics_vs_xi_h5
+# from processing import *
+import numpy as np
+import pandas as pd
 import ROOT
 
 class ProcessData:
-    def __init__( self, lepton_type, data_sample, labels, fileNames, random_protons=False, mix_protons=False, runOnMC=False, output_dir="", use_hash_index=False ):
+    def __init__( self, lepton_type, data_sample, labels, fileNames, runOnMC=False, output_dir="" ):
 
         if lepton_type not in ( 'muon', 'electron' ):
             raise RuntimeError( "Invalid lepton_type argument." )
@@ -18,9 +19,7 @@ class ProcessData:
         self.fileNames_ = fileNames
         self.output_dir_ = None
         if output_dir is not None and output_dir != "": self.output_dir_ = output_dir
-        self.use_hash_index_ = use_hash_index
-        self.random_protons_ = random_protons 
-        self.mix_protons_ = mix_protons
+        # self.use_hash_index_ = use_hash_index
         self.runOnMC_ = runOnMC
         self.data_periods_ = None
         if self.data_sample_ == '2017':
@@ -30,9 +29,9 @@ class ProcessData:
 
         self.jecPars_ = None
         self.jecUncertainty_ = None
-        self.systematics_Xi_X_, self.systematics_Xi_Y_ = 2 * [ None ]
+
         if self.runOnMC_:
-            cmssw_release_base_ = os.environ[ 'CMSSW_RELEASE_BASE' ]
+            cmssw_release_base_ = os.environ[ 'CMSSW_FULL_RELEASE_BASE' ]
             print ( cmssw_release_base_ )
             cmssw_base_ = os.environ[ 'CMSSW_BASE' ]
             print( cmssw_base_ )
@@ -57,72 +56,11 @@ class ProcessData:
             self.jecUncertainty_ = ROOT.JetCorrectionUncertainty( self.jecPars_ )
             print ( self.jecUncertainty_ )
 
-            self.systematics_Xi_X_, self.systematics_Xi_Y_ = get_systematics_vs_xi_h5(
-                data_periods=self.data_periods_,
-                fileName="reco_characteristics/reco_characteristics_version1.h5"
-                )
-
     def getJetUncertainty( self, jet_eta, jet_pt ):
         self.jecUncertainty_.setJetEta( jet_eta )
         self.jecUncertainty_.setJetPt( jet_pt )
         unc_ = self.jecUncertainty_.getUncertainty(True)
         return unc_
-
-    def getSigmaXi( self, df ):
-        df__ = df[ [ 'period', 'random', 'arm', 'xi' ] ]
-        msk_random_ = ( df__.loc[ :, "random" ] == 0 )
-        print ( msk_random_, np.sum( msk_random_ ) )
-        sigma_var_ = np.zeros( df__.shape[0] ) 
-        var_ = 'xi'
-        # f_low_edge_ = lambda row: np.invert( self.systematics_Xi_X_[ row[ "period" ] ][ row[ "arm" ] ] <= row[ var_ ] ).argmax() - 1
-        # f_high_edge_ = lambda row: ( self.systematics_Xi_X_[ row[ "period" ] ][ row[ "arm" ] ] >= row[ var_ ] ).argmax()
-        f_low_edge_ = lambda row: np.invert( self.systematics_Xi_X_[ row[ "period" ] ][ row[ "arm" ] ] <= row[ var_ ] ).argmax() - 1
-        f_high_edge_ = lambda row: ( self.systematics_Xi_X_[ row[ "period" ] ][ row[ "arm" ] ] > row[ var_ ] ).argmax()
-        if np.sum( msk_random_ ) > 0:
-            sigma_var_[ msk_random_ ] = df__.loc[ msk_random_ ].apply(
-                lambda row:
-                    ( ( self.systematics_Xi_Y_[ row[ "period" ] ][ row[ "arm" ] ][ f_high_edge_( row ) ] -
-                        self.systematics_Xi_Y_[ row[ "period" ] ][ row[ "arm" ] ][ f_low_edge_( row ) ] ) /
-                      ( self.systematics_Xi_X_[ row[ "period" ] ][ row[ "arm" ] ][ f_high_edge_( row ) ] -
-                        self.systematics_Xi_X_[ row[ "period" ] ][ row[ "arm" ] ][ f_low_edge_( row ) ] ) *
-                      ( row[ var_ ] - self.systematics_Xi_X_[ row[ "period" ] ][ row[ "arm" ] ][ f_low_edge_( row ) ] ) +
-                        self.systematics_Xi_Y_[ row[ "period" ] ][ row[ "arm" ] ][ f_low_edge_( row ) ] ),
-                axis=1 ).values 
-        print ( sigma_var_, sigma_var_.size )
-        return sigma_var_
-
-    def fetchDataPeriod( self, df ):
-        run_str_ = "run"
-        if self.random_protons_ or self.mix_protons_:
-            run_str_ = "run_rnd"
-        elif self.runOnMC_ and not self.mix_protons_:
-            run_str_ = "run_mc"
-
-        if "period" not in df.columns:
-            df_run_ranges_ = None
-            if self.data_sample_ == '2017':
-                df_run_ranges_ = df_run_ranges_2017
-            elif self.data_sample_ == '2018':
-                df_run_ranges_ = df_run_ranges_2018
-
-            df.loc[ :, "period" ] = np.nan
-            for idx_ in range( df_run_ranges_.shape[0] ):
-                msk_period_ = ( ( df.loc[ :, run_str_ ] >= df_run_ranges_.iloc[ idx_ ][ "min" ] ) & ( df.loc[ :, run_str_ ] <= df_run_ranges_.iloc[ idx_ ][ "max" ] ) )
-                sum_period_ = np.sum( msk_period_ )
-                if sum_period_ > 0:
-                    period_key_ = df_run_ranges_.index[ idx_ ]
-                    df.loc[ :, "period" ].loc[ msk_period_ ] = period_key_
-                    print ( "{}: {}".format( period_key_, sum_period_ ) )
-            print ( df.loc[ :, "period" ] )
-
-    def calculateXiSmeared( self, df ):
-        # Gaussian shift
-        sigma_xi_ = self.getSigmaXi( df )
-        df_arr_xi_ = df.loc[ :, "xi" ]
-        smeared_xi_arr_ = df_arr_xi_.values + ( 0. + np.random.randn( df_arr_xi_.size ) * sigma_xi_ )
-        print ( smeared_var_arr_, smeared_var_arr_.size )
-        df.loc[ :, "sigma_xi" ] = sigma_xi_
-        df.loc[ :, "xi_smeared" ] = smeared_xi_arr_
 
     def calculateJets( self, df ):
         label_ = "_nom"
@@ -356,24 +294,36 @@ class ProcessData:
                                                                      df.loc[ :, "jet0_pt" + label__ ] * np.exp( df.loc[ :, "jet0_eta" ] ) )
                df.loc[ :, "xiCMS_56" + label__ ] = ( 1. / 13000 ) * ( df.loc[ :, "WLeptonicPt" + "_nom" ] * np.exp( -df.loc[ :, "WLeptonicEta" ] ) +
                                                                      df.loc[ :, "jet0_pt" + label__ ] * np.exp( -df.loc[ :, "jet0_eta" ] ) )
+    def get_data( self, fileNames, runMin=None, runMax=None ):
+        """
+        fileNames dict:
+            'protons_multiRP': list of paths,
+            'protons_singleRP': list of paths,
+            'ppstracks': list of paths,
+            'event_counts': list of paths
+       
+        """
+    
+        runMin_ = runMin
+        runMax_ = runMax
 
-    def calculateProtons( self, df ):
-        df_arr_xi_ = df.loc[ :, "xi" ]
-        df.loc[ :, "xi" + "_nom" ] = df_arr_xi_
-        if self.runOnMC_:
-           sigma_xi_ = self.getSigmaXi( df )
-           # variations_ = [ 0.10, 0.30, 0.60, 1.0 ]
-           # names_varplus_ = [ "_p10", "_p30", "_p60", "_p100" ]
-           # names_varminus_ = [ "_m10", "_m30", "_m60", "_m100" ]
-           variations_ = [ 1.0 ]
-           names_varplus_ = [ "_p100" ]
-           names_varminus_ = [ "_m100" ]
-           for idx_, val_ in enumerate( variations_ ):
-               df.loc[ :, "xi" + names_varplus_[ idx_ ] ] = df_arr_xi_ + val_ * sigma_xi_
-               df.loc[ :, "xi" + names_varminus_[ idx_ ] ] = df_arr_xi_ - val_ * sigma_xi_
-           df.loc[ :, "sigma_xi" ] = sigma_xi_
+        fileNames_multiRP_      = fileNames[ 'protons_multiRP' ]
+        fileNames_singleRP_     = fileNames[ 'protons_singleRP' ]
+        fileNames_ppstracks_    = fileNames[ 'ppstracks' ]
+        fileNames_counts_       = fileNames[ 'event_counts' ]
+        if len( fileNames_multiRP_ ) == 1: fileNames_multiRP_ = fileNames_multiRP_[0]
+        if len( fileNames_singleRP_ ) == 1: fileNames_singleRP_ = fileNames_singleRP_[0]
+        if len( fileNames_ppstracks_ ) == 1: fileNames_ppstracks_ = fileNames_ppstracks_[0]
+        if len( fileNames_counts_ ) == 1: fileNames_counts_ = fileNames_counts_[0]
+    
+        df_protons_multiRP_  = pd.read_parquet( fileNames_multiRP_ )
+        df_protons_singleRP_ = pd.read_parquet( fileNames_singleRP_ )
+        df_ppstracks_        = pd.read_parquet( fileNames_ppstracks_ )
+        df_event_counts_     = pd.read_parquet( fileNames_counts_ )
+        
+        return ( df_event_counts_, df_protons_multiRP_, df_protons_singleRP_, df_ppstracks_ )
 
-    def __call__( self, apply_fiducial=True, within_aperture=False, calculate_vars_pp=True, select_2protons=True, runMin=None, runMax=None ):
+    def __call__( self, runMin=None, runMax=None ):
 
         if runMin is not None and runMin <= 0:
             raise RuntimeError( "Invalid data_sample argument." )
@@ -383,119 +333,97 @@ class ProcessData:
         runMin_ = runMin
         runMax_ = runMax
 
-        df_counts = {}
-        df_protons_multiRP_index = {}
-        df_protons_multiRP_events = {}
+        # df_counts = {}
+        # df_protons_multiRP_index = {}
         
         for label_ in self.labels_:
             import time
             print( time.strftime("%Y/%m/%d %H:%M:%S", time.localtime() ) )
             time_s_ = time.time()
 
-            file_path_ = None
-            file_name_label_ =  "data-store-{}.h5".format( label_ )
+            file_path_protons_multiRP_ = None
+            file_name_label_protons_multiRP_ =  "process_data-{}-protons_multiRP.parquet".format( label_ )
             if self.output_dir_ is not None and self.output_dir_ != "":
-                file_path_ = "{}/{}".format( self.output_dir_, file_name_label_ )
+                file_path_protons_multiRP_ = "{}/{}".format( self.output_dir_, file_name_label_protons_multiRP_ )
             else:
-                file_path_ = file_name_label_
-            print ( file_path_ )
-            # with pd.HDFStore( "reduced-data-store-{}.h5".format( label_ ), complevel=5 ) as store_:
-            with pd.HDFStore( file_path_, 'w', complevel=5 ) as store_:
-        
-                df_counts_, df_protons_multiRP_, df_protons_singleRP_, df_ppstracks_ = get_data( self.fileNames_[ label_ ], runMin=runMin_, runMax=runMax_ )
+                file_path_protons_multiRP_ = file_name_label_protons_multiRP_
+            print ( file_path_protons_multiRP_ )
 
-                self.fetchDataPeriod( df_protons_multiRP_ ) 
+            df_counts_, df_protons_multiRP_, df_protons_singleRP_, df_ppstracks_ = self.get_data( self.fileNames_[ label_ ], runMin=runMin_, runMax=runMax_ )
 
-                if self.runOnMC_:
-                    f_jecUncertainty_ = lambda row_: self.getJetUncertainty( row_[ "jet0_eta" ], row_[ "jet0_pt" ] )
-                    df_protons_multiRP_.loc[ :, "jet0_unc" ] = df_protons_multiRP_[ [ "jet0_pt", "jet0_eta" ] ].apply( f_jecUncertainty_, axis=1 )
-                    print ( df_protons_multiRP_.loc[ :, "jet0_unc" ] )
-                    # df_protons_multiRP_.loc[ :, "jet0_pt_up" ] = df_protons_multiRP_.loc[ :, "jet0_pt" ] * ( 1. + df_protons_multiRP_.loc[ :, "jet0_unc" ] )
-                    # df_protons_multiRP_.loc[ :, "jet0_pt_dw" ] = df_protons_multiRP_.loc[ :, "jet0_pt" ] * ( 1. - df_protons_multiRP_.loc[ :, "jet0_unc" ] )
-                    df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] = np.sqrt(
-                        df_protons_multiRP_.loc[ :, 'jet0_px' ] ** 2 +
-                        df_protons_multiRP_.loc[ :, 'jet0_py' ] ** 2 )
-                    df_protons_multiRP_.loc[ :, 'C_JER_ref' ] = ( df_protons_multiRP_.loc[ :, 'jet0_pt' ] / df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] )
-                    deltaPhi_jet_genjet_ = ( df_protons_multiRP_.loc[ :, "jet0_phi"] - df_protons_multiRP_.loc[ :, "gen_jet0_phi"] )
-                    msk_dphi_ = ( deltaPhi_jet_genjet_ < -np.pi )
-                    deltaPhi_jet_genjet_.loc[ msk_dphi_ ] = deltaPhi_jet_genjet_.loc[ msk_dphi_ ] + 2*np.pi
-                    msk_dphi_ = ( deltaPhi_jet_genjet_ >= np.pi )
-                    deltaPhi_jet_genjet_.loc[ msk_dphi_ ] = deltaPhi_jet_genjet_.loc[ msk_dphi_ ] - 2*np.pi
-                    deltaEta_jet_genjet_ = ( df_protons_multiRP_.loc[ :, "jet0_eta"] - df_protons_multiRP_.loc[ :, "gen_jet0_eta"] )
-                    deltaR_jet_genjet_ = np.sqrt( ( deltaPhi_jet_genjet_ ) ** 2 + ( deltaEta_jet_genjet_ ) ** 2 )
-                    df_protons_multiRP_.loc[ :, 'deltaR_jet_genjet' ] = deltaR_jet_genjet_
-                    df_protons_multiRP_.loc[ :, 'deltaPt_jet_genjet' ] = np.abs( df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] - df_protons_multiRP_.loc[ :, 'gen_jet0_pt' ] )
-                    df_protons_multiRP_.loc[ :, 'match_jet_genjet' ] = (
-                        ( df_protons_multiRP_.loc[ :, 'deltaR_jet_genjet' ] < ( 0.8 / 2 ) ) &
-                        ( df_protons_multiRP_.loc[ :, 'deltaPt_jet_genjet' ] < ( 3. * df_protons_multiRP_.loc[ :, 'jet0_jer_res' ] * df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] ) )
-                        )
-                    print ( df_protons_multiRP_.loc[ :, 'match_jet_genjet' ] )
-                    print ( np.sum( df_protons_multiRP_.loc[ :, 'match_jet_genjet' ] ) )
-                    print ( np.sum( df_protons_multiRP_.loc[ :, 'match_jet_genjet' ] ) / df_protons_multiRP_.shape[0] )
-                    df_protons_multiRP_.loc[ :, 'C_JER' ] = np.nan
-                    df_protons_multiRP_.loc[ :, 'JER_rand' ] = np.nan
-                    df_protons_multiRP_.loc[ :, 'C_JER_jer_up' ] = np.nan
-                    df_protons_multiRP_.loc[ :, 'C_JER_jer_dw' ] = np.nan
-                    msk_match_ = df_protons_multiRP_.loc[ :, 'match_jet_genjet' ]
-                    
-                    df_protons_multiRP_.loc[ :, 'C_JER' ].where( ~msk_match_,
-                        ( 1. + ( df_protons_multiRP_.loc[ :, 'jet0_jer_sf' ] - 1. ) *
-                               ( ( df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] - df_protons_multiRP_.loc[ :, 'gen_jet0_pt' ] ) / df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] ) 
-                        ), inplace=True )
-                    df_protons_multiRP_.loc[ :, 'C_JER' ].where( msk_match_, df_protons_multiRP_.loc[ :, 'C_JER_ref' ], inplace=True )
-                    df_protons_multiRP_.loc[ :, 'JER_rand' ].where( msk_match_,
-                        ( ( df_protons_multiRP_.loc[ :, 'C_JER_ref' ] - 1. ) / np.sqrt( np.max( ( ( df_protons_multiRP_.loc[ :, 'jet0_jer_sf' ] ** 2 ) - 1. ) , 0. ) ) ),
-                        inplace=True
-                        )
-                    df_protons_multiRP_.loc[ :, 'C_JER_jer_up' ].where( ~msk_match_,
-                        ( 1. + ( df_protons_multiRP_.loc[ :, 'jet0_jer_sfup' ] - 1. ) *
-                               ( ( df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] - df_protons_multiRP_.loc[ :, 'gen_jet0_pt' ] ) / df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] )
-                        ), inplace=True )
-                    df_protons_multiRP_.loc[ :, 'C_JER_jer_dw' ].where( ~msk_match_,
-                        ( 1. + ( df_protons_multiRP_.loc[ :, 'jet0_jer_sfdown' ] - 1. ) *
-                               ( ( df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] - df_protons_multiRP_.loc[ :, 'gen_jet0_pt' ] ) / df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] )
-                        ), inplace=True )
-                    df_protons_multiRP_.loc[ :, 'C_JER_jer_up' ].where( msk_match_, ( 1. + df_protons_multiRP_.loc[ :, 'JER_rand' ] * np.sqrt( np.max( ( ( df_protons_multiRP_.loc[ :, 'jet0_jer_sfup' ] ** 2 ) - 1. ) , 0. ) ) ), inplace=True )
-                    df_protons_multiRP_.loc[ :, 'C_JER_jer_dw' ].where( msk_match_, ( 1. + df_protons_multiRP_.loc[ :, 'JER_rand' ] * np.sqrt( np.max( ( ( df_protons_multiRP_.loc[ :, 'jet0_jer_sfdown' ] ** 2 ) - 1. ) , 0. ) ) ), inplace=True )
-                    print ( df_protons_multiRP_.loc[ :, 'C_JER' ] )
-                    print ( df_protons_multiRP_.loc[ :, 'C_JER_jer_up' ] )
-                    print ( df_protons_multiRP_.loc[ :, 'C_JER_jer_dw' ] )
+            # self.fetchDataPeriod( df_protons_multiRP_ ) 
 
-                self.calculateJets( df_protons_multiRP_ )
+            if self.runOnMC_:
 
-                if self.lepton_type_ == 'muon':
-                    self.calculateMuons( df_protons_multiRP_ )
-                elif self.lepton_type_ == 'electron':
-                    self.calculateElectrons( df_protons_multiRP_ )
-
-                self.calculateWLep( df_protons_multiRP_ )
-                self.calculateWW( df_protons_multiRP_ )
-                self.calculateXiCMS( df_protons_multiRP_ )
-
-                self.calculateProtons( df_protons_multiRP_ )
-
-                df_protons_multiRP_index_, df_protons_multiRP_events_, df_ppstracks_index_ = process_data_protons_multiRP(
-                    self.lepton_type_,
-                    self.data_sample_,
-                    df_protons_multiRP_,
-                    df_ppstracks_,
-                    apply_fiducial=apply_fiducial,
-                    within_aperture=within_aperture,
-                    random_protons=self.random_protons_,
-                    mix_protons=self.mix_protons_,
-                    calculate_vars_pp=calculate_vars_pp,
-                    select_2protons=select_2protons,
-                    runOnMC=self.runOnMC_,
-                    use_hash_index=self.use_hash_index_
+                f_jecUncertainty_ = lambda row_: self.getJetUncertainty( row_[ "jet0_eta" ], row_[ "jet0_pt" ] )
+                df_protons_multiRP_.loc[ :, "jet0_unc" ] = df_protons_multiRP_[ [ "jet0_pt", "jet0_eta" ] ].apply( f_jecUncertainty_, axis=1 )
+                print ( df_protons_multiRP_.loc[ :, "jet0_unc" ] )
+                # df_protons_multiRP_.loc[ :, "jet0_pt_up" ] = df_protons_multiRP_.loc[ :, "jet0_pt" ] * ( 1. + df_protons_multiRP_.loc[ :, "jet0_unc" ] )
+                # df_protons_multiRP_.loc[ :, "jet0_pt_dw" ] = df_protons_multiRP_.loc[ :, "jet0_pt" ] * ( 1. - df_protons_multiRP_.loc[ :, "jet0_unc" ] )
+                df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] = np.sqrt(
+                    df_protons_multiRP_.loc[ :, 'jet0_px' ] ** 2 +
+                    df_protons_multiRP_.loc[ :, 'jet0_py' ] ** 2 )
+                df_protons_multiRP_.loc[ :, 'C_JER_ref' ] = ( df_protons_multiRP_.loc[ :, 'jet0_pt' ] / df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] )
+                deltaPhi_jet_genjet_ = ( df_protons_multiRP_.loc[ :, "jet0_phi"] - df_protons_multiRP_.loc[ :, "gen_jet0_phi"] )
+                msk_dphi_ = ( deltaPhi_jet_genjet_ < -np.pi )
+                deltaPhi_jet_genjet_.loc[ msk_dphi_ ] = deltaPhi_jet_genjet_.loc[ msk_dphi_ ] + 2*np.pi
+                msk_dphi_ = ( deltaPhi_jet_genjet_ >= np.pi )
+                deltaPhi_jet_genjet_.loc[ msk_dphi_ ] = deltaPhi_jet_genjet_.loc[ msk_dphi_ ] - 2*np.pi
+                deltaEta_jet_genjet_ = ( df_protons_multiRP_.loc[ :, "jet0_eta"] - df_protons_multiRP_.loc[ :, "gen_jet0_eta"] )
+                deltaR_jet_genjet_ = np.sqrt( ( deltaPhi_jet_genjet_ ) ** 2 + ( deltaEta_jet_genjet_ ) ** 2 )
+                df_protons_multiRP_.loc[ :, 'deltaR_jet_genjet' ] = deltaR_jet_genjet_
+                df_protons_multiRP_.loc[ :, 'deltaPt_jet_genjet' ] = np.abs( df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] - df_protons_multiRP_.loc[ :, 'gen_jet0_pt' ] )
+                df_protons_multiRP_.loc[ :, 'match_jet_genjet' ] = (
+                    ( df_protons_multiRP_.loc[ :, 'deltaR_jet_genjet' ] < ( 0.8 / 2 ) ) &
+                    ( df_protons_multiRP_.loc[ :, 'deltaPt_jet_genjet' ] < ( 3. * df_protons_multiRP_.loc[ :, 'jet0_jer_res' ] * df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] ) )
                     )
+                print ( df_protons_multiRP_.loc[ :, 'match_jet_genjet' ] )
+                print ( np.sum( df_protons_multiRP_.loc[ :, 'match_jet_genjet' ] ) )
+                print ( np.sum( df_protons_multiRP_.loc[ :, 'match_jet_genjet' ] ) / df_protons_multiRP_.shape[0] )
+                df_protons_multiRP_.loc[ :, 'C_JER' ] = np.nan
+                df_protons_multiRP_.loc[ :, 'JER_rand' ] = np.nan
+                df_protons_multiRP_.loc[ :, 'C_JER_jer_up' ] = np.nan
+                df_protons_multiRP_.loc[ :, 'C_JER_jer_dw' ] = np.nan
+                msk_match_ = df_protons_multiRP_.loc[ :, 'match_jet_genjet' ]
+                
+                df_protons_multiRP_.loc[ :, 'C_JER' ].where( ~msk_match_,
+                    ( 1. + ( df_protons_multiRP_.loc[ :, 'jet0_jer_sf' ] - 1. ) *
+                           ( ( df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] - df_protons_multiRP_.loc[ :, 'gen_jet0_pt' ] ) / df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] ) 
+                    ), inplace=True )
+                df_protons_multiRP_.loc[ :, 'C_JER' ].where( msk_match_, df_protons_multiRP_.loc[ :, 'C_JER_ref' ], inplace=True )
+                df_protons_multiRP_.loc[ :, 'JER_rand' ].where( msk_match_,
+                    ( ( df_protons_multiRP_.loc[ :, 'C_JER_ref' ] - 1. ) / np.sqrt( np.max( ( ( df_protons_multiRP_.loc[ :, 'jet0_jer_sf' ] ** 2 ) - 1. ) , 0. ) ) ),
+                    inplace=True
+                    )
+                df_protons_multiRP_.loc[ :, 'C_JER_jer_up' ].where( ~msk_match_,
+                    ( 1. + ( df_protons_multiRP_.loc[ :, 'jet0_jer_sfup' ] - 1. ) *
+                           ( ( df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] - df_protons_multiRP_.loc[ :, 'gen_jet0_pt' ] ) / df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] )
+                    ), inplace=True )
+                df_protons_multiRP_.loc[ :, 'C_JER_jer_dw' ].where( ~msk_match_,
+                    ( 1. + ( df_protons_multiRP_.loc[ :, 'jet0_jer_sfdown' ] - 1. ) *
+                           ( ( df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] - df_protons_multiRP_.loc[ :, 'gen_jet0_pt' ] ) / df_protons_multiRP_.loc[ :, 'jet0_pt_unsmeared' ] )
+                    ), inplace=True )
+                df_protons_multiRP_.loc[ :, 'C_JER_jer_up' ].where( msk_match_, ( 1. + df_protons_multiRP_.loc[ :, 'JER_rand' ] * np.sqrt( np.max( ( ( df_protons_multiRP_.loc[ :, 'jet0_jer_sfup' ] ** 2 ) - 1. ) , 0. ) ) ), inplace=True )
+                df_protons_multiRP_.loc[ :, 'C_JER_jer_dw' ].where( msk_match_, ( 1. + df_protons_multiRP_.loc[ :, 'JER_rand' ] * np.sqrt( np.max( ( ( df_protons_multiRP_.loc[ :, 'jet0_jer_sfdown' ] ** 2 ) - 1. ) , 0. ) ) ), inplace=True )
+                print ( df_protons_multiRP_.loc[ :, 'C_JER' ] )
+                print ( df_protons_multiRP_.loc[ :, 'C_JER_jer_up' ] )
+                print ( df_protons_multiRP_.loc[ :, 'C_JER_jer_dw' ] )
 
-                store_[ "counts" ] = df_counts_
-                store_[ "protons_multiRP"] = df_protons_multiRP_index_
-                store_[ "events_multiRP" ] = df_protons_multiRP_events_
-            
+            self.calculateJets( df_protons_multiRP_ )
+
+            if self.lepton_type_ == 'muon':
+                self.calculateMuons( df_protons_multiRP_ )
+            elif self.lepton_type_ == 'electron':
+                self.calculateElectrons( df_protons_multiRP_ )
+
+            self.calculateWLep( df_protons_multiRP_ )
+            self.calculateWW( df_protons_multiRP_ )
+            self.calculateXiCMS( df_protons_multiRP_ )
+
+            df__ = df_protons_multiRP_
+            print ( df__ )
+            df__.to_parquet( file_path_protons_multiRP_, engine='pyarrow' )
+
             time_e_ = time.time()
             print ( "Total time elapsed: {:.0f}".format( time_e_ - time_s_ ) )
 
-            # with pd.HDFStore( "reduced-data-store-{}.h5".format( label_ ), 'r' ) as store_:
-            with pd.HDFStore( file_path_, 'r' ) as store_:
-                print ( list( store_ ) )

@@ -112,6 +112,6 @@ elif data_sample == '2018':
             "/eos/home-a/antoniov/Workspace/analysis/data/PPS/EGamma-Run2018D/EGamma-Run2018D_merged.root"
         ]
 
-create_table_ = CreateTable( label=label, lepton_type=lepton_type, data_sample=data_sample, fileNames=fileNames_data, tree_path=tree_path, output_dir="output" )
+create_table_ = CreateTable( label=label, lepton_type=lepton_type, data_sample=data_sample, fileNames=fileNames_data, tree_path=tree_path, output_dir="output_test" )
 
 create_table_( random_protons=False, step_size=step_size, firstEvent=None, entryStop=None, debug=debug ) 

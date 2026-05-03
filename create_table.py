@@ -2,8 +2,8 @@ import uproot
 import awkward as ak
 import numpy as np
 import pandas as pd
-import numba as nb
-import h5py
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 # from processing import run_ranges_periods_2017, run_ranges_periods_2018, lumi_periods_2017, lumi_periods_2018
 from processing import df_run_ranges_2017, df_run_ranges_2018, df_run_ranges_mixing_2017, df_run_ranges_mixing_2018, lumi_periods_2017, lumi_periods_2018
@@ -298,8 +298,6 @@ def create_table( fileNames, label, lepton_type, data_sample, tree_path="demo/Sl
         #         protons_extra_mix_all_[ key_ ] = protons_extra_mix_all_rnd_
         #     ppstracks_mix_all_[ key_ ] = ppstracks_mix_all_rnd_
 
-    # dset_chunk_size = 50000
-
     # columns_protons = [ "run", "lumiblock", "event", "slice", "crossingAngle", "betaStar", "instLumi", "xi", "thx", "thy", "t", "ismultirp", "rpid", "arm", "random",
     #                     "jet0_pt", "jet0_eta", "jet0_phi", "jet0_energy", "jet0_mass", "jet0_corrmass", "jet0_tau1", "jet0_tau2", "jet0_vertexz",
     #                     "jet0_px", "jet0_py", "jet0_pz",
@@ -369,6 +367,82 @@ def create_table( fileNames, label, lepton_type, data_sample, tree_path="demo/Sl
         # columns_ppstracks.extend( [ "run_rnd", "lumiblock_rnd", "event_rnd", "slice_rnd" ] )
         columns_ppstracks.extend( [ "run_rnd", "lumiblock_rnd", "event_rnd", "crossingAngle_rnd", "betaStar_rnd" ] )
 
+    # Schema
+    schema_dict_protons_singleRP_ = {}
+    for col_ in columns_protons:
+        schema_dict_protons_singleRP_[ col_ ] = pa.float64()
+
+    schema_dict_protons_multiRP_ = {}
+    for col_ in columns_protons_multiRP:
+        schema_dict_protons_multiRP_[ col_ ] = pa.float64()
+    
+    schema_dict_ppstracks_ = {}
+    for col_ in columns_ppstracks:
+        schema_dict_ppstracks_[ col_ ] = pa.float64()
+
+    astype_dict_protons_ = {
+        "run": pa.int64(),
+        "lumiblock": pa.int64(),
+        "event": pa.int64(),
+        "slice": pa.int32(),
+        "ismultirp": pa.int32(),
+        "rpid": pa.int32(),
+        "arm": pa.int32(),
+        "random": pa.int32(),
+        "nVertices": pa.int32(),
+        "num_bjets_ak8": pa.int32(),
+        "num_bjets_ak4": pa.int32(),
+        "num_jets_ak4": pa.int32(),
+        "pfcand_nextracks": pa.int32(),
+        "pfcand_nextracks_noDRl": pa.int32(),
+        "trackpixshift1": pa.int32(),
+        "rpid1": pa.int32()
+    }
+
+    if "muon0_charge" in columns_protons:
+        astype_dict_protons_.update( { "muon0_charge": pa.int32() } )
+
+    if "electron0_charge" in columns_protons:
+        astype_dict_protons_.update( { "electron0_charge": pa.int32() } )
+
+    if "run_mc" in columns_protons:
+        astype_dict_protons_.update( { "run_mc": pa.int64() } )
+
+    if "run_rnd" in columns_protons:
+        astype_dict_protons_.update( { "run_rnd": pa.int64(), "lumiblock_rnd": pa.int64(), "event_rnd": pa.int64() } )
+
+    astype_dict_singleRP_ = astype_dict_protons_.copy()
+
+    astype_dict_multiRP_ = astype_dict_protons_.copy()
+
+    if "rpid2" in columns_protons_multiRP:
+        astype_dict_multiRP_.update( { "trackpixshift2": pa.int32(), "rpid2": pa.int32() } )
+
+    astype_dict_ppstracks_ = {
+        "run": pa.int64(),
+        "lumiblock": pa.int64(),
+        "event": pa.int64(),
+        "slice": pa.int32(),
+        "rpid": pa.int32()
+    }
+
+    if "run_mc" in columns_ppstracks:
+        astype_dict_ppstracks_.update( { "run_mc": pa.int64() } )
+
+    if "run_rnd" in columns_ppstracks:
+        astype_dict_ppstracks_.update( { "run_rnd": pa.int64(), "lumiblock_rnd": pa.int64(), "event_rnd": pa.int64() } )
+
+    schema_dict_protons_singleRP_.update( astype_dict_singleRP_ )
+    schema_dict_protons_multiRP_.update( astype_dict_multiRP_ )
+    schema_dict_ppstracks_.update( astype_dict_ppstracks_ )
+
+    schema_protons_singleRP = pa.schema( list( schema_dict_protons_singleRP_.items() ) )
+    schema_protons_multiRP  = pa.schema( list( schema_dict_protons_multiRP_.items() ) )
+    schema_ppstracks        = pa.schema( list( schema_dict_ppstracks_.items() ) )
+    print ( schema_protons_singleRP )
+    print ( schema_protons_multiRP )
+    print ( schema_ppstracks )
+   
     protons_keys = {}
     for col_ in columns_protons_multiRP:
         protons_keys[ col_ ] = col_
@@ -380,25 +454,34 @@ def create_table( fileNames, label, lepton_type, data_sample, tree_path="demo/Sl
 
     counts_label_protons_ = "Proton" if not ( random_protons_ or mix_protons_ ) else "ProtonRnd"
 
-    dset_chunk_size = 50000
+    # dset_chunk_size = 50000
 
     # output_file_path_ = ( output_path_ + '/' + 'output-' + label_ + '.h5' )
-    file_name_label_ = 'output-{}.h5'.format( label_ )
+    # file_name_label_ = 'output-{}.h5'.format( label_ )
+    file_name_label_protons_singleRP_  = 'table_protons-{}-protons_singleRP.parquet'.format( label_ )
+    file_name_label_protons_multiRP_   = 'table_protons-{}-protons_multiRP.parquet'.format( label_ )
+    file_name_label_ppstracks_ = 'table_protons-{}-ppstracks.parquet'.format( label_ )
+    
+    output_file_path_protons_singleRP_  = file_name_label_protons_singleRP_
+    output_file_path_protons_multiRP_   = file_name_label_protons_multiRP_
+    output_file_path_ppstracks_ = file_name_label_ppstracks_
     if output_dir_ is not None and output_dir_ != "":
-        output_file_path_ = '{}/{}'.format( output_dir_ , file_name_label_ )
-    else:
-        output_file_path_ = file_name_label_
-    print ( output_file_path_ )
-    with h5py.File( output_file_path_, 'w') as f:
+        output_file_path_protons_singleRP_  = '{}/{}'.format( output_dir_ , file_name_label_protons_singleRP_ )
+        output_file_path_protons_multiRP_   = '{}/{}'.format( output_dir_ , file_name_label_protons_multiRP_ )
+        output_file_path_ppstracks_ = '{}/{}'.format( output_dir_ , file_name_label_ppstracks_ )
+    print ( output_file_path_protons_singleRP_ )
+    print ( output_file_path_protons_multiRP_ )
+    print ( output_file_path_ppstracks_ )
 
-        dset_protons_multiRP = f.create_dataset( 'protons_multiRP', ( dset_chunk_size, len( columns_protons_multiRP ) ), compression="gzip", chunks=True, maxshape=( None , len( columns_protons_multiRP ) ) )
-        print ( "Initial dataset shape: {}".format( dset_protons_multiRP.shape ) )
+    selections = None
+    counts = None
 
-        dset_protons_singleRP = f.create_dataset( 'protons_singleRP', ( dset_chunk_size, len( columns_protons ) ), compression="gzip", chunks=True, maxshape=( None , len( columns_protons ) ) )
-        print ( "Initial dataset shape: {}".format( dset_protons_singleRP.shape ) )
+    dset_multiRP_entries = 0
+    dset_singleRP_entries = 0
+    dset_ppstracks_entries = 0
 
-        dset_ppstracks = f.create_dataset( 'ppstracks', ( dset_chunk_size, len( columns_ppstracks ) ), compression="gzip", chunks=True, maxshape=( None , len( columns_ppstracks ) ) )
-        print ( "Initial dataset shape: {}".format( dset_ppstracks.shape ) )
+    # with h5py.File( output_file_path_, 'w') as f:
+    with pq.ParquetWriter( output_file_path_protons_singleRP_, schema_protons_singleRP ) as writer_protons_singleRP, pq.ParquetWriter( output_file_path_protons_multiRP_, schema_protons_multiRP ) as writer_protons_multiRP, pq.ParquetWriter( output_file_path_ppstracks_, schema_ppstracks ) as writer_ppstracks:
 
         protons_multiRP_list = {}
         for col_ in columns_protons_multiRP:
@@ -411,21 +494,6 @@ def create_table( fileNames, label, lepton_type, data_sample, tree_path="demo/Sl
         ppstracks_list = {}
         for col_ in columns_ppstracks:
             ppstracks_list[ col_ ] = []           
-
-        selections = None
-        counts = None
-
-        dset_multiRP_slice = 0
-        dset_multiRP_idx = 0
-        dset_multiRP_entries = 0
-
-        dset_singleRP_slice = 0
-        dset_singleRP_idx = 0
-        dset_singleRP_entries = 0
-
-        dset_ppstracks_slice = 0
-        dset_ppstracks_idx = 0
-        dset_ppstracks_entries = 0
 
         for file_ in fileNames_:
             print ( file_ ) 
@@ -1158,142 +1226,58 @@ def create_table( fileNames, label, lepton_type, data_sample, tree_path="demo/Sl
 
                 arr_size_multiRP_ = len( protons_multiRP_list[ "xi" ] )
                 print ( "Flattened array size multi-RP: {}".format( arr_size_multiRP_ ) )
+                print ( protons_multiRP_list )
 
                 for col_ in columns_protons:
                     protons_singleRP_list[ col_ ] = np.array( ak.flatten( protons_singleRP_sel_[ protons_keys[ col_ ] ] ) )
 
                 arr_size_singleRP_ = len( protons_singleRP_list[ "xi" ] )
                 print ( "Flattened array size single-RP: {}".format( arr_size_singleRP_ ) )
+                print ( protons_singleRP_list )
 
                 for col_ in columns_ppstracks:
                     ppstracks_list[ col_ ] = np.array( ak.flatten( ppstracks_sel_[ ppstracks_keys[ col_ ] ] ) )
 
                 arr_size_ppstracks_ = len( ppstracks_list[ "x" ] )
                 print ( "Flattened array size tracks: {}".format( arr_size_ppstracks_ ) )
+                print ( ppstracks_list )
 
                 dset_multiRP_entries += arr_size_multiRP_
                 dset_singleRP_entries += arr_size_singleRP_
                 dset_ppstracks_entries += arr_size_ppstracks_
 
-                if dset_multiRP_entries > dset_chunk_size:
-                    resize_factor_ = ( dset_multiRP_entries // dset_chunk_size )
-                    chunk_resize_  = resize_factor_ * dset_chunk_size
+                table_protons_multiRP_ = pa.Table.from_pydict( protons_multiRP_list, schema=schema_protons_multiRP )
+                writer_protons_multiRP.write_table( table_protons_multiRP_ )
 
-                    print ( "Resizing output dataset by {} entries.".format( chunk_resize_ ) )
-                    dset_protons_multiRP.resize( ( dset_protons_multiRP.shape[0] + chunk_resize_ ), axis=0 )
-                    print ( "Dataset shape: {}".format( dset_protons_multiRP.shape ) )
+                table_protons_singleRP_ = pa.Table.from_pydict( protons_singleRP_list, schema=schema_protons_singleRP )
+                writer_protons_singleRP.write_table( table_protons_singleRP_ )
 
-                    dset_multiRP_slice += resize_factor_
-                    # Count the rest to the chunk size 
-                    dset_multiRP_entries = ( dset_multiRP_entries % dset_chunk_size )
-
-                if dset_singleRP_entries > dset_chunk_size:
-                    resize_factor_ = ( dset_singleRP_entries // dset_chunk_size )
-                    chunk_resize_  = resize_factor_ * dset_chunk_size
-
-                    print ( "Resizing output dataset by {} entries.".format( chunk_resize_ ) )
-                    dset_protons_singleRP.resize( ( dset_protons_singleRP.shape[0] + chunk_resize_ ), axis=0 )
-                    print ( "Dataset shape: {}".format( dset_protons_singleRP.shape ) )
-
-                    dset_singleRP_slice += resize_factor_
-                    # Count the rest to the chunk size 
-                    dset_singleRP_entries = ( dset_singleRP_entries % dset_chunk_size )
-
-                if dset_ppstracks_entries > dset_chunk_size:
-                    resize_factor_ = ( dset_ppstracks_entries // dset_chunk_size )
-                    chunk_resize_  = resize_factor_ * dset_chunk_size
-
-                    print ( "Resizing output dataset by {} entries.".format( chunk_resize_ ) )
-                    dset_ppstracks.resize( ( dset_ppstracks.shape[0] + chunk_resize_ ), axis=0 )
-                    print ( "Dataset shape: {}".format( dset_ppstracks.shape ) )
-
-                    dset_ppstracks_slice += resize_factor_
-                    # Count the rest to the chunk size 
-                    dset_ppstracks_entries = ( dset_ppstracks_entries % dset_chunk_size )
-
-                print ( "Stacking data." )
-                data_protons_multiRP_ = np.stack( list( protons_multiRP_list.values() ), axis=1 )
-                print ( data_protons_multiRP_.shape )
-                print ( data_protons_multiRP_ )
-
-                data_protons_singleRP_ = np.stack( list( protons_singleRP_list.values() ), axis=1 )
-                print ( data_protons_singleRP_.shape )
-                print ( data_protons_singleRP_ )
-
-                data_ppstracks_ = np.stack( list( ppstracks_list.values() ), axis=1 )
-                print ( data_ppstracks_.shape )
-                print ( data_ppstracks_ )
-
-                dset_idx_next_ = dset_multiRP_idx + arr_size_multiRP_
-                print ( "Slice: {}".format( dset_multiRP_slice ) )
-                print ( "Writing in positions ({},{})".format( dset_multiRP_idx, dset_idx_next_ ) )
-                dset_protons_multiRP[ dset_multiRP_idx : dset_idx_next_ ] = data_protons_multiRP_
-                dset_multiRP_idx = dset_idx_next_ 
-
-                dset_idx_next_ = dset_singleRP_idx + arr_size_singleRP_
-                print ( "Slice: {}".format( dset_singleRP_slice ) )
-                print ( "Writing in positions ({},{})".format( dset_singleRP_idx, dset_idx_next_ ) )
-                dset_protons_singleRP[ dset_singleRP_idx : dset_idx_next_ ] = data_protons_singleRP_
-                dset_singleRP_idx = dset_idx_next_ 
-
-                dset_idx_next_ = dset_ppstracks_idx + arr_size_ppstracks_
-                print ( "Slice: {}".format( dset_ppstracks_slice ) )
-                print ( "Writing in positions ({},{})".format( dset_ppstracks_idx, dset_idx_next_ ) )
-                dset_ppstracks[ dset_ppstracks_idx : dset_idx_next_ ] = data_ppstracks_
-                dset_ppstracks_idx = dset_idx_next_ 
+                table_ppstracks_ = pa.Table.from_pydict( ppstracks_list, schema=schema_ppstracks )
+                writer_ppstracks.write_table( table_ppstracks_ )
 
             # Iteration on input files
             root_.close()
 
-        # Reduce dataset to its final size 
-        print ( "Reduce dataset." )
-        dset_protons_multiRP.resize( ( dset_multiRP_idx ), axis=0 ) 
-        print ( "Dataset shape: {}".format( dset_protons_multiRP.shape ) )
+    print ( "Entries multiRP: {}".format( dset_multiRP_entries ) )
+    print ( "Entries singleRP: {}".format( dset_singleRP_entries ) )
+    print ( "Entries ppstracks: {}".format( dset_ppstracks_entries ) )
 
-        dset_protons_singleRP.resize( ( dset_singleRP_idx ), axis=0 ) 
-        print ( "Dataset shape: {}".format( dset_protons_singleRP.shape ) )
+    event_counts_ = counts
+    # selections_ = np.array( selections, dtype='S' )
+    selections_ = selections
 
-        dset_ppstracks.resize( ( dset_ppstracks_idx ), axis=0 ) 
-        print ( "Dataset shape: {}".format( dset_ppstracks.shape ) )
+    data_event_counts = {
+        'selections' : selections_,
+        'event_counts' : event_counts_
+    }
+    print ( data_event_counts )
 
-        print ( "Writing column names and event counts.")
+    file_name_label_event_counts_  = 'event_counts-{}.parquet'.format( label_ )
+    output_file_path_event_counts_  = file_name_label_event_counts_
+    if output_dir_ is not None and output_dir_ != "":
+        output_file_path_event_counts_  = '{}/{}'.format( output_dir_ , file_name_label_event_counts_ )
+    print ( output_file_path_event_counts_ )
 
-        columns_protons_multiRP_ = np.array( columns_protons_multiRP, dtype='S' )
-        print ( columns_protons_multiRP_ )
-
-        columns_protons_singleRP_ = np.array( columns_protons, dtype='S' )
-        print ( columns_protons_singleRP_ )
-
-        columns_ppstracks_ = np.array( columns_ppstracks, dtype='S' )
-        print ( columns_ppstracks_ )
-
-        event_counts_ = counts
-        print ( event_counts_ )
-
-        selections_ = np.array( selections, dtype='S' )
-        print ( selections_ )
-
-        dset_columns_protons_multiRP = f.create_dataset( 'columns_protons_multiRP', data=columns_protons_multiRP_ )
-        dset_columns_protons_singleRP = f.create_dataset( 'columns_protons_singleRP', data=columns_protons_singleRP_ )
-        dset_columns_ppstracks = f.create_dataset( 'columns_ppstracks', data=columns_ppstracks_ )
-        dset_counts = f.create_dataset( 'event_counts', data=event_counts_ )
-        dset_selections = f.create_dataset( 'selections', data=selections_ )
-
-        print ( dset_protons_multiRP )
-        print ( dset_protons_multiRP[-1] )
-        print ( dset_protons_singleRP )
-        print ( dset_protons_singleRP[-1] )   
-        print ( dset_ppstracks )
-        print ( dset_ppstracks[-1] )   
-
-        print ( dset_columns_protons_multiRP )
-        print ( list( dset_columns_protons_multiRP ) )
-        print ( dset_columns_protons_singleRP )
-        print ( list( dset_columns_protons_singleRP ) )
-        print ( dset_columns_ppstracks )
-        print ( list( dset_columns_ppstracks ) )   
-        print ( dset_counts )
-        print ( list( dset_counts ) )
-        print ( dset_selections )
-        print ( list( dset_selections ) )
+    table_event_counts_ = pa.Table.from_pydict( data_event_counts )
+    pq.write_table( table_event_counts_, output_file_path_event_counts_ )
 

@@ -1,4 +1,3 @@
-set cwd_=$PWD
-cd CMSSW_11_2_4
+cd CMSSW_12_2_4_patch1
 cmsenv
-cd $cwd_
+. pyenv/bin/activate
